@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/ynsta/seireitranslations-epub/internal/logger"
 )
 
 // Config holds the application configuration
@@ -52,15 +54,18 @@ func ParseCommandLine() (*Config, error) {
 		return nil, fmt.Errorf("error creating temp directory: %v", err)
 	}
 
+	// Initialize the logger with the debug setting
+	logger.Init(cfg.Debug)
+
 	return cfg, nil
 }
 
 // Cleanup removes the temporary directory if not in debug mode
 func (c *Config) Cleanup() {
 	if !c.Debug {
-		fmt.Printf("Cleaning up temporary directory: %s\n", c.TempDir)
+		logger.Logger.Info("Cleaning up temporary directory", "dir", c.TempDir)
 		os.RemoveAll(c.TempDir)
 	} else {
-		fmt.Printf("Debug mode: Temporary directory will not be cleaned up\n")
+		logger.Logger.Info("Debug mode: Temporary directory will not be cleaned up", "dir", c.TempDir)
 	}
 }

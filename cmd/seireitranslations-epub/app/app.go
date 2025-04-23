@@ -1,8 +1,7 @@
-package main
+package app
 
 import (
-	"fmt"
-	"log"
+	"log/slog"
 	"path/filepath"
 
 	"github.com/ynsta/seireitranslations-epub/internal/assets"
@@ -14,18 +13,20 @@ import (
 	"github.com/ynsta/seireitranslations-epub/pkg/utils"
 )
 
-func main() {
+// Execute runs the main program logic and returns an exit code
+func Execute() int {
 	// Parse command-line arguments
 	cfg, err := config.ParseCommandLine()
 	if err != nil {
-		log.Fatalf("Error parsing command-line arguments: %v", err)
+		slog.Error("Error parsing command-line arguments", "error", err)
+		return 1
 	}
 
 	// Clean up temporary directory at the end, but only in non-debug mode
 	if !cfg.Debug {
 		defer cfg.Cleanup()
 	} else {
-		log.Printf("Debug mode: Temporary directory will not be cleaned up")
+		slog.Debug("Debug mode: Temporary directory will not be cleaned up")
 	}
 
 	// Create a downloader
@@ -44,34 +45,41 @@ func main() {
 	// Download and add the cover image
 	coverData, err := dl.DownloadFile(cfg.CoverURL, "cover"+filepath.Ext(cfg.CoverURL))
 	if err != nil {
-		log.Fatalf("Error downloading cover image: %v", err)
+		slog.Error("Error downloading cover image", "error", err)
+		return 1
 	}
 
 	if err := epubGen.AddCover(coverData, cfg.CoverURL); err != nil {
-		log.Fatalf("Error adding cover image: %v", err)
+		slog.Error("Error adding cover image", "error", err)
+		return 1
 	}
 
 	// Add CSS stylesheet for consistent formatting using embedded file
 	cssContent, err := assets.GetCSS()
 	if err != nil {
-		log.Fatalf("Error reading embedded CSS file: %v", err)
+		slog.Error("Error reading embedded CSS file", "error", err)
+		return 1
 	}
 
 	if err := epubGen.AddCSS(cssContent); err != nil {
-		log.Fatalf("Error adding CSS: %v", err)
+		slog.Error("Error adding CSS", "error", err)
+		return 1
 	}
 
 	// Read the list of URLs
 	urlEntries, err := utils.ReadURLList(cfg.URLListFile)
 	if err != nil {
-		log.Fatalf("Error reading URL list file: %v", err)
+		slog.Error("Error reading URL list file", "error", err)
+		return 1
 	}
 
 	// Create a scraper
-	s := scraper.New(cfg.Debug)
+	s := scraper.New(cfg.TempDir, cfg.Debug)
 
 	// Create HTML processor
 	htmlProc := processor.NewHTMLProcessor()
+	htmlProc.SetDebug(cfg.Debug)
+	htmlProc.SetTempDir(cfg.TempDir)
 
 	// Create image processor
 	imgProc := processor.NewImageProcessor(dl, cfg.TempDir, cfg.Debug, epubGen.GetEpub())
@@ -81,29 +89,29 @@ func main() {
 	var chapterIndex int = 1
 
 	for i, entry := range urlEntries {
-		log.Printf("Processing (%d/%d): %s - %s", i+1, len(urlEntries), entry.Title, entry.URL)
+		slog.Info("Processing URL", "index", i+1, "total", len(urlEntries), "title", entry.Title, "url", entry.URL)
 
 		// Download and process the page
-		content, err := s.ExtractContent(entry.URL)
+		content, err := s.ExtractContent(entry.URL, i)
 		if err != nil {
-			log.Printf("Error processing %s: %v", entry.URL, err)
+			slog.Warn("Error processing URL", "url", entry.URL, "error", err)
 			continue
 		}
 
 		// Cleanup the HTML - remove inline styles, fix formatting
-		cleanedHTML := htmlProc.CleanHTML(content.HTML)
+		cleanedHTML := htmlProc.CleanHTML(content.HTML, entry.Title)
 
 		// Process images in the content
 		processedHTML, err := imgProc.ProcessImages(cleanedHTML, entry.URL)
 		if err != nil {
-			log.Printf("Error processing images: %v", err)
+			slog.Warn("Error processing images", "error", err)
 			processedHTML = cleanedHTML // Fallback to cleaned HTML without image processing
 		}
 
 		// Check if we're continuing the same chapter or starting a new one
 		if currentChapter != nil && entry.Title == currentChapter.Title {
 			// Continuing the same chapter - append the content
-			log.Printf("Continuing chapter: %s", entry.Title)
+			slog.Info("Continuing chapter", "title", entry.Title)
 			currentChapter.AppendContent(processedHTML)
 		} else {
 			// If we have content from the previous chapter, add it to the EPUB
@@ -113,7 +121,7 @@ func main() {
 
 				// Add the chapter to the EPUB
 				if err := epubGen.AddChapter(currentChapter.Title, chapterHTML); err != nil {
-					log.Printf("Error adding chapter to EPUB: %v", err)
+					slog.Warn("Error adding chapter to EPUB", "title", currentChapter.Title, "error", err)
 				}
 			}
 
@@ -131,14 +139,16 @@ func main() {
 
 		// Add the chapter to the EPUB
 		if err := epubGen.AddChapter(currentChapter.Title, chapterHTML); err != nil {
-			log.Printf("Error adding final chapter to EPUB: %v", err)
+			slog.Warn("Error adding final chapter to EPUB", "title", currentChapter.Title, "error", err)
 		}
 	}
 
 	// Write the EPUB file
 	if err := epubGen.Write(); err != nil {
-		log.Fatalf("Error writing EPUB: %v", err)
+		slog.Error("Error writing EPUB", "error", err)
+		return 1
 	}
 
-	fmt.Printf("Successfully created EPUB: %s\n", cfg.OutputFile)
+	slog.Info("Successfully created EPUB", "file", cfg.OutputFile)
+	return 0
 }

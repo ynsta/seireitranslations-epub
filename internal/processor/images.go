@@ -2,6 +2,7 @@ package processor
 
 import (
 	"fmt"
+	"log/slog"
 	"net/url"
 	"path/filepath"
 	"strings"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/bmaupin/go-epub"
+	"github.com/ynsta/seireitranslations-epub/internal/logger"
 )
 
 // ImageProcessor handles image processing for EPUB content
@@ -70,30 +72,32 @@ func (p *ImageProcessor) ProcessImages(content string, pageURL string) (string, 
 			imgFilename := fmt.Sprintf("fullimg_%d_%d%s", time.Now().UnixNano(), i, imgExt)
 
 			// Download the image
-			fmt.Printf("Downloading full-size image: %s\n", fullImgSrc)
+			if logger.Debug {
+				slog.Info("Downloading full-size image", "url", fullImgSrc)
+			}
 			imgData, err := p.downloader.DownloadFile(fullImgSrc, imgFilename)
 			if err != nil {
-				fmt.Printf("Error downloading full-size image: %v\n", err)
+				slog.Warn("Error downloading full-size image", "error", err)
 				return
 			}
 
 			// Don't proceed if we got no data
 			if len(imgData) == 0 {
-				fmt.Printf("No image data received for full-size image, skipping\n")
+				slog.Warn("No image data received for full-size image, skipping")
 				return
 			}
 
 			// Save image to a temporary file
 			tempImgPath, err := p.downloader.SaveToFile(imgData, imgFilename)
 			if err != nil {
-				fmt.Printf("Error saving full-size image: %v\n", err)
+				slog.Warn("Error saving full-size image", "error", err)
 				return
 			}
 
 			// Add image to EPUB
 			internalImgPath, err := p.epub.AddImage(tempImgPath, imgFilename)
 			if err != nil {
-				fmt.Printf("Error adding full-size image to EPUB: %v\n", err)
+				slog.Warn("Error adding full-size image to EPUB", "error", err)
 				return
 			}
 
@@ -138,7 +142,7 @@ func (p *ImageProcessor) ProcessImages(content string, pageURL string) (string, 
 
 		// Skip image if URL is empty
 		if imgSrc == "" {
-			fmt.Printf("Empty image URL, skipping\n")
+			slog.Debug("Empty image URL, skipping")
 			return
 		}
 
@@ -150,30 +154,32 @@ func (p *ImageProcessor) ProcessImages(content string, pageURL string) (string, 
 		imgFilename := fmt.Sprintf("image_%d_%d%s", time.Now().UnixNano(), i, imgExt)
 
 		// Download the image
-		fmt.Printf("Downloading image: %s\n", imgSrc)
+		if logger.Debug {
+			slog.Info("Downloading image", "url", imgSrc)
+		}
 		imgData, err := p.downloader.DownloadFile(imgSrc, imgFilename)
 		if err != nil {
-			fmt.Printf("Error downloading image: %v\n", err)
+			slog.Warn("Error downloading image", "error", err)
 			return
 		}
 
 		// Don't proceed if we got no data
 		if len(imgData) == 0 {
-			fmt.Printf("No image data received, skipping\n")
+			slog.Warn("No image data received, skipping")
 			return
 		}
 
 		// Save image to a temporary file
 		tempImgPath, err := p.downloader.SaveToFile(imgData, imgFilename)
 		if err != nil {
-			fmt.Printf("Error saving image: %v\n", err)
+			slog.Warn("Error saving image", "error", err)
 			return
 		}
 
 		// Add image to EPUB
 		internalImgPath, err := p.epub.AddImage(tempImgPath, imgFilename)
 		if err != nil {
-			fmt.Printf("Error adding image to EPUB: %v\n", err)
+			slog.Warn("Error adding image to EPUB", "error", err)
 			return
 		}
 
@@ -206,13 +212,13 @@ func (p *ImageProcessor) resolveURL(imgSrc string, pageURL string) string {
 		// If it's a relative URL, try to resolve it against the page URL
 		baseURL, err := url.Parse(pageURL)
 		if err != nil {
-			fmt.Printf("Error parsing base URL: %v\n", err)
+			slog.Error("Error parsing base URL", "error", err)
 			return imgSrc
 		}
 
 		relativeURL, err := url.Parse(imgSrc)
 		if err != nil {
-			fmt.Printf("Error parsing relative URL: %v\n", err)
+			slog.Error("Error parsing relative URL", "error", err)
 			return imgSrc
 		}
 

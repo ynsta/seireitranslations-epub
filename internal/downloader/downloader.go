@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/ynsta/seireitranslations-epub/internal/logger"
 )
 
 // Downloader handles file downloading with caching support
@@ -35,7 +38,9 @@ func (d *Downloader) DownloadFile(url string, filename string) ([]byte, error) {
 	if d.debug && filename != "" {
 		tempFilePath := filepath.Join(d.tempDir, filename)
 		if fileData, err := os.ReadFile(tempFilePath); err == nil {
-			fmt.Printf("Using cached file: %s\n", tempFilePath)
+			if logger.Debug {
+				slog.Debug("Using cached file", "path", tempFilePath)
+			}
 			return fileData, nil
 		}
 	}
@@ -46,7 +51,9 @@ func (d *Downloader) DownloadFile(url string, filename string) ([]byte, error) {
 	}
 
 	// Make the request
-	fmt.Printf("Downloading: %s\n", url)
+	if logger.Debug {
+		slog.Info("Downloading file", "url", url)
+	}
 	resp, err := client.Get(url)
 	if err != nil {
 		return nil, err
@@ -73,9 +80,9 @@ func (d *Downloader) DownloadFile(url string, filename string) ([]byte, error) {
 	if d.debug && filename != "" {
 		tempFilePath := filepath.Join(d.tempDir, filename)
 		if err := os.WriteFile(tempFilePath, buf.Bytes(), 0644); err != nil {
-			fmt.Printf("Warning: Could not cache file to %s: %v\n", tempFilePath, err)
-		} else {
-			fmt.Printf("Cached file to: %s\n", tempFilePath)
+			slog.Warn("Could not cache file", "path", tempFilePath, "error", err)
+		} else if logger.Debug {
+			slog.Debug("Cached file", "path", tempFilePath)
 		}
 	}
 

@@ -2,11 +2,14 @@ package epub
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/bmaupin/go-epub"
+	"github.com/ynsta/seireitranslations-epub/internal/logger"
 )
 
 // Generator handles EPUB file generation
@@ -92,6 +95,33 @@ func (g *Generator) AddCSS(cssData []byte) error {
 
 // AddChapter adds a chapter to the EPUB
 func (g *Generator) AddChapter(title string, content string) error {
+	// Debug logging when debug mode is enabled
+	if g.debug {
+		if logger.Debug {
+			slog.Debug("AddChapter called", "title", title, "content_length", len(content))
+		}
+
+		// Check if content is empty or very short
+		if len(content) < 100 {
+			slog.Warn("Content is very short or empty in AddChapter", "title", title, "content", content)
+		} else if logger.Debug {
+			previewContent := content
+			if len(content) > 100 {
+				previewContent = content[:100]
+			}
+			slog.Debug("Content in AddChapter preview", "title", title, "preview", previewContent)
+		}
+
+		// Save debug file in temp directory
+		safeTitle := sanitizeFilename(title)
+		debugFilePath := filepath.Join(g.tempDir, fmt.Sprintf("debug_%s_epub.html", safeTitle))
+		if err := os.WriteFile(debugFilePath, []byte(content), 0644); err != nil {
+			slog.Error("Failed to save debug file", "error", err)
+		} else if logger.Debug {
+			slog.Debug("Saved content to debug file", "title", title, "path", debugFilePath)
+		}
+	}
+
 	// Add the chapter to the EPUB
 	_, err := g.epub.AddSection(content, title, "", g.cssPath)
 	if err != nil {
@@ -99,6 +129,14 @@ func (g *Generator) AddChapter(title string, content string) error {
 	}
 
 	return nil
+}
+
+// min returns the smaller of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // Write writes the EPUB file to disk
@@ -109,14 +147,29 @@ func (g *Generator) Write() error {
 		return fmt.Errorf("error writing EPUB: %v", err)
 	}
 
-	fmt.Printf("Successfully created EPUB: %s\n", g.outputFile)
+	slog.Info("Successfully created EPUB", "file", g.outputFile)
 	return nil
+}
+
+// sanitizeFilename creates a safe filename from a title by removing special characters
+func sanitizeFilename(title string) string {
+	// Replace special characters with underscores
+	re := regexp.MustCompile(`[^a-zA-Z0-9_]`)
+	safe := re.ReplaceAllString(title, "_")
+
+	// Truncate if too long (filesystem limits)
+	if len(safe) > 50 {
+		safe = safe[:50]
+	}
+
+	return safe
 }
 
 // Chapter represents a chapter in the EPUB
 type Chapter struct {
 	Title   string
 	Content strings.Builder
+	Debug   bool
 }
 
 // NewChapter creates a new Chapter
@@ -126,9 +179,40 @@ func NewChapter(title string) *Chapter {
 	}
 }
 
+// SetDebug sets the debug flag for this chapter
+func (c *Chapter) SetDebug(debug bool) {
+	c.Debug = debug
+}
+
 // AppendContent appends content to the chapter
 func (c *Chapter) AppendContent(content string) {
+	// Debug logging if debug is enabled
+	if c.Debug {
+		if logger.Debug {
+			slog.Debug("AppendContent called",
+				"chapter", c.Title,
+				"content_length", len(content),
+				"current_total", c.Content.Len())
+		}
+
+		// Check if content is empty or very short
+		if len(content) < 100 {
+			slog.Warn("Content being appended is very short", "chapter", c.Title, "content", content)
+		} else if logger.Debug {
+			previewContent := content
+			if len(content) > 100 {
+				previewContent = content[:100]
+			}
+			slog.Debug("Content being appended preview", "chapter", c.Title, "preview", previewContent)
+		}
+	}
+
 	c.Content.WriteString(content)
+
+	// Debug logging after append
+	if c.Debug && logger.Debug {
+		slog.Debug("Content appended", "chapter", c.Title, "total_length", c.Content.Len())
+	}
 }
 
 // GetContent returns the chapter content
@@ -138,5 +222,15 @@ func (c *Chapter) GetContent() string {
 
 // HasContent returns true if the chapter has content
 func (c *Chapter) HasContent() bool {
-	return c.Content.Len() > 0
+	hasContent := c.Content.Len() > 0
+
+	// Debug logging if debug is enabled
+	if c.Debug && logger.Debug {
+		slog.Debug("HasContent check",
+			"chapter", c.Title,
+			"content_length", c.Content.Len(),
+			"has_content", hasContent)
+	}
+
+	return hasContent
 }
