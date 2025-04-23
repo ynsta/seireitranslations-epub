@@ -145,3 +145,8 @@ The program automatically adds an attribution chapter as the first chapter in ea
 
 ```bash
 go run ./cmd/seireitranslations-epub --title "My Light Novel" --author "Author Name" --cover "https://example.com/cover.jpg" --output "mynovel.epub" --urls "urls.txt"
+```
+
+## License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.

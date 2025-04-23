@@ -6,7 +6,7 @@
 - ✅ Command-line interface with all required parameters
 - ✅ URL list parsing from text file
 - ✅ Content extraction from SeireiTranslations blog posts
-- ✅ HTML cleaning and formatting
+- ✅ HTML cleaning and formatting with both custom processing and go-readability
 - ✅ Image downloading and processing
 - ✅ EPUB generation with proper metadata
 - ✅ Chapter organization and structure
@@ -87,8 +87,9 @@ The project is in a functional state with all core requirements implemented. It 
 
 ### HTML Processing
 - **Initial Approach**: Basic cleaning of inline styles
-- **Current Approach**: Comprehensive cleaning with special handling for specific elements
-- **Rationale**: Improved formatting consistency for better e-reader display
+- **Previous Approach**: Comprehensive cleaning with special handling for specific elements
+- **Current Approach**: Multi-stage cleaning with custom processing followed by go-readability standardization
+- **Rationale**: Improved formatting consistency and simplified HTML structure for better e-reader display
 
 ### Code Organization
 - **Initial Approach**: Single package with all functionality

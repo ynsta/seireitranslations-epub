@@ -39,6 +39,14 @@ The current approach uses a multi-pattern strategy with fallbacks:
 
 This approach prioritizes flexibility but may need further refinement for specific edge cases.
 
+### HTML Cleaning Enhancement
+We've integrated go-readability (github.com/go-shiori/go-readability) as a final HTML cleaning step:
+- Custom extraction and initial cleaning is performed first using our existing patterns
+- go-readability is then applied as a final step to further simplify and standardize the HTML
+- Images are preserved and reinserted if needed to ensure they aren't lost during processing
+- All debug info is preserved for troubleshooting
+- The original cleaning method is used as a fallback if readability processing fails
+
 ### Debug Mode Implementation
 Debug mode has been implemented with several features:
 - Preservation of temporary files
@@ -50,12 +58,13 @@ This implementation provides good visibility into the extraction process but inc
 
 ### HTML Cleaning Approach
 The HTML cleaning approach focuses on:
-- Removing inline styles for consistent formatting
+- Initial cleaning that removes inline styles and unnecessary attributes
 - Converting special elements to appropriate heading levels
 - Removing navigation and advertising elements
 - Preserving important structural elements
+- Final standardization with go-readability for cleaner, more EPUB-friendly HTML
 
-This balance between cleaning and preservation has been carefully designed for optimal e-reader display.
+This multi-stage approach balances custom handling of SeireiTranslations-specific elements with standardized HTML cleaning for optimal e-reader display.
 
 ## Important Patterns and Preferences
 

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/go-shiori/go-readability"
 	"github.com/ynsta/seireitranslations-epub/internal/logger"
 )
 
@@ -121,25 +122,118 @@ func (p *HTMLProcessor) CleanHTML(html string, contentTitle string) string {
 		}
 	})
 
-	// Clean up line breaks and spacing
-	cleanedHtml, _ := doc.Html()
+	// Get the HTML after initial cleaning
+	initialCleanedHtml, _ := doc.Html()
 
+	// Save initial cleaned HTML for debugging if needed
+	if p.debug {
+		if p.tempDir != "" {
+			safeTitle := sanitizeFilename(contentTitle)
+			debugFilePath := filepath.Join(p.tempDir, fmt.Sprintf("debug_%s_initial_cleaned.html", safeTitle))
+			if err := os.WriteFile(debugFilePath, []byte(initialCleanedHtml), 0600); err != nil {
+				slog.Error("Failed to save initial cleaned HTML debug file", "error", err)
+			} else if logger.Debug {
+				slog.Debug("Saved initial cleaned HTML", "title", contentTitle, "path", debugFilePath)
+			}
+		}
+	}
+
+	// Now apply go-readability as a final cleaning step
+	// We'll wrap the content in a simple HTML structure to ensure readability processes it correctly
+	wrappedHTML := fmt.Sprintf("<html><body>%s</body></html>", initialCleanedHtml)
+
+	// Extract and preserve images before readability processing
+	var images []struct {
+		Src      string
+		Alt      string
+		Original string
+	}
+
+	doc.Find("img").Each(func(i int, s *goquery.Selection) {
+		src, _ := s.Attr("src")
+		alt, _ := s.Attr("alt")
+		html, _ := s.Parent().Html()
+
+		images = append(images, struct {
+			Src      string
+			Alt      string
+			Original string
+		}{
+			Src:      src,
+			Alt:      alt,
+			Original: html,
+		})
+	})
+
+	// Use readability to simplify the HTML structure
+	article, err := readability.FromReader(strings.NewReader(wrappedHTML), nil)
+
+	var finalHtml string
+	if err != nil {
+		slog.Error("Failed to process with readability", "error", err)
+		// If readability fails, use the result of initial cleaning
+		finalHtml = initialCleanedHtml
+	} else {
+		// Get the content from readability
+		finalHtml = article.Content
+
+		// Check if images were preserved, if not, reinsert them
+		readabilityDoc, err := goquery.NewDocumentFromReader(strings.NewReader(finalHtml))
+		if err == nil {
+			for _, img := range images {
+				// Check if this image still exists in the readability output
+				found := false
+				readabilityDoc.Find("img").Each(func(i int, s *goquery.Selection) {
+					src, _ := s.Attr("src")
+					if src == img.Src {
+						found = true
+					}
+				})
+
+				// If not found, reinsert at the end
+				if !found && img.Src != "" {
+					if logger.Debug {
+						slog.Debug("Reinserting missing image", "src", img.Src)
+					}
+					readabilityDoc.Find("body").AppendHtml(fmt.Sprintf("<p><img src=\"%s\" alt=\"%s\"></p>", img.Src, img.Alt))
+				}
+			}
+
+			// Get the HTML with potentially reinserted images
+			finalHtml, _ = readabilityDoc.Html()
+		}
+
+		// Save readability output for debugging if needed
+		if p.debug {
+			if p.tempDir != "" {
+				safeTitle := sanitizeFilename(contentTitle)
+				debugFilePath := filepath.Join(p.tempDir, fmt.Sprintf("debug_%s_readability.html", safeTitle))
+				if err := os.WriteFile(debugFilePath, []byte(finalHtml), 0600); err != nil {
+					slog.Error("Failed to save readability HTML debug file", "error", err)
+				} else if logger.Debug {
+					slog.Debug("Saved readability HTML", "title", contentTitle, "path", debugFilePath)
+				}
+			}
+		}
+	}
+
+	// Clean up line breaks and spacing
 	// Remove excessive whitespace
 	re := regexp.MustCompile(`\s{2,}`)
-	cleanedHtml = re.ReplaceAllString(cleanedHtml, " ")
+	finalHtml = re.ReplaceAllString(finalHtml, " ")
 
 	// Remove empty lines
 	re = regexp.MustCompile(`(?m)^\s*$[\r\n]*`)
-	cleanedHtml = re.ReplaceAllString(cleanedHtml, "")
+	finalHtml = re.ReplaceAllString(finalHtml, "")
 
 	// Debug logging for output HTML
 	if p.debug {
 		if logger.Debug {
-			slog.Debug("CleanHTML output", "title", contentTitle, "length", len(cleanedHtml))
+			slog.Debug("CleanHTML output", "title", contentTitle, "length", len(finalHtml))
 
 			// Log a sample of the output HTML for debugging
-			if len(cleanedHtml) > 100 {
-				slog.Debug("CleanHTML output sample", "sample", cleanedHtml[:100])
+			if len(finalHtml) > 100 {
+				slog.Debug("CleanHTML output sample", "sample", finalHtml[:100])
 			}
 		}
 
@@ -147,7 +241,7 @@ func (p *HTMLProcessor) CleanHTML(html string, contentTitle string) string {
 		if p.tempDir != "" {
 			safeTitle := sanitizeFilename(contentTitle)
 			debugFilePath := filepath.Join(p.tempDir, fmt.Sprintf("debug_%s_cleaned.html", safeTitle))
-			if err := os.WriteFile(debugFilePath, []byte(cleanedHtml), 0600); err != nil {
+			if err := os.WriteFile(debugFilePath, []byte(finalHtml), 0600); err != nil {
 				slog.Error("Failed to save cleaned HTML debug file", "error", err)
 			} else if logger.Debug {
 				slog.Debug("Saved cleaned HTML", "title", contentTitle, "path", debugFilePath)
@@ -155,7 +249,7 @@ func (p *HTMLProcessor) CleanHTML(html string, contentTitle string) string {
 		}
 	}
 
-	return cleanedHtml
+	return finalHtml
 }
 
 // ProcessChapterContent creates properly formatted HTML for a chapter

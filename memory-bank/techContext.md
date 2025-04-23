@@ -16,11 +16,20 @@
    - Handles creating valid EPUB structures
    - Manages EPUB metadata, content files, and navigation
 
-3. **Indirect Dependencies**
+3. **github.com/go-shiori/go-readability**
+   - Go port of Mozilla's Readability library (used in Firefox Reader View)
+   - Extracts and simplifies the main content from HTML pages
+   - Used for final HTML cleaning to create more EPUB-friendly content
+   - Preserves important content structure while removing clutter
+
+4. **Indirect Dependencies**
    - **github.com/andybalholm/cascadia**: CSS selector parsing for goquery
    - **github.com/gabriel-vasile/mimetype**: MIME type detection
    - **github.com/gofrs/uuid**: UUID generation for EPUB components
    - **github.com/vincent-petithory/dataurl**: Data URL handling for embedded content
+   - **github.com/go-shiori/dom**: HTML DOM manipulation for go-readability
+   - **github.com/gogs/chardet**: Character encoding detection for go-readability
+   - **github.com/araddon/dateparse**: Date parsing for metadata extraction
    - **golang.org/x/net**: Network functionality and HTML utilities
 
 ## Development Setup
