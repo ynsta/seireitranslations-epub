@@ -1,0 +1,58 @@
+h1, h2, h3 {
+    font-family: "Sans-serif";
+    margin: 1em 0 0.5em 0;
+    text-align: center;
+}
+
+.chapter {
+    font-family: "Serif";
+    line-height: 1.1;
+    margin: 0;
+    padding: 0;
+}
+
+p {
+    margin: 0.5em 0;
+    text-indent: 1em;
+    text-align: justify;
+}
+
+/* Better spacing for lists */
+ul, ol {
+    margin: 0.3em 0;
+    padding-left: 1.5em;
+}
+
+li {
+    margin-bottom: 0.2em;
+}
+
+/* Better image handling */
+img {
+    max-width: 100% !important;
+    height: auto !important;
+    display: block;
+    margin: 0.5em auto;
+    page-break-inside: avoid;
+}
+
+/* Table formatting */
+table {
+    border-collapse: collapse;
+    margin: 0.5em 0;
+    width: 100%;
+}
+
+th, td {
+    padding: 0.3em;
+    border: 1px solid #ddd;
+}
+
+/* Quote formatting */
+blockquote {
+    margin: 0.5em 0;
+    padding: 0.3em 0.5em;
+    border-left: 3px solid #ccc;
+    background-color: #f9f9f9;
+    font-style: italic;
+}
