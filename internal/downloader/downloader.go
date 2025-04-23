@@ -58,7 +58,11 @@ func (d *Downloader) DownloadFile(url string, filename string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			slog.Warn("Failed to close response body", "url", url, "error", closeErr)
+		}
+	}()
 
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("HTTP status code: %d", resp.StatusCode)
@@ -79,7 +83,7 @@ func (d *Downloader) DownloadFile(url string, filename string) ([]byte, error) {
 	// If in debug mode and filename is provided, save the file for future use
 	if d.debug && filename != "" {
 		tempFilePath := filepath.Join(d.tempDir, filename)
-		if err := os.WriteFile(tempFilePath, buf.Bytes(), 0644); err != nil {
+		if err := os.WriteFile(tempFilePath, buf.Bytes(), 0600); err != nil {
 			slog.Warn("Could not cache file", "path", tempFilePath, "error", err)
 		} else if logger.Debug {
 			slog.Debug("Cached file", "path", tempFilePath)
@@ -92,7 +96,7 @@ func (d *Downloader) DownloadFile(url string, filename string) ([]byte, error) {
 // SaveToFile saves data to a file in the temporary directory
 func (d *Downloader) SaveToFile(data []byte, filename string) (string, error) {
 	tempFilePath := filepath.Join(d.tempDir, filename)
-	if err := os.WriteFile(tempFilePath, data, 0644); err != nil {
+	if err := os.WriteFile(tempFilePath, data, 0600); err != nil {
 		return "", fmt.Errorf("error saving file to %s: %v", tempFilePath, err)
 	}
 

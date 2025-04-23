@@ -43,7 +43,11 @@ func (s *Scraper) ExtractContent(pageURL string, lineNum int) (Content, error) {
 	if err != nil {
 		return Content{}, fmt.Errorf("error fetching URL: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			slog.Warn("Failed to close response body", "url", pageURL, "error", closeErr)
+		}
+	}()
 
 	if resp.StatusCode != 200 {
 		return Content{}, fmt.Errorf("HTTP status code: %d", resp.StatusCode)
@@ -83,16 +87,17 @@ func (s *Scraper) ExtractContent(pageURL string, lineNum int) (Content, error) {
 		slog.Debug("Content length after sharethis removal", "length", len(contentDoc.Text()))
 	}
 
-	// Remove the h4 element since it's redundant with the chapter title
-	contentDoc.Find("h4").Each(func(i int, s *goquery.Selection) {
-		s.Remove()
+	// Remove only the first chapter title element since it's redundant with the chapter title
+	firstChapterTitle := contentDoc.Find(ChapterTitleSelector).First()
+	if firstChapterTitle.Length() > 0 {
+		firstChapterTitle.Remove()
 		if logger.Debug {
-			slog.Debug("Removed h4 element")
+			slog.Debug("Removed first chapter title element")
 		}
-	})
+	}
 
 	if logger.Debug {
-		slog.Debug("Content length after h4 removal", "length", len(contentDoc.Text()))
+		slog.Debug("Content length after chapter title removal", "length", len(contentDoc.Text()))
 	}
 
 	// Remove blog URL entries (seireitranslations.blogspot.com)

@@ -58,7 +58,7 @@ func (g *Generator) AddCover(coverData []byte, coverURL string) error {
 
 	// Save the cover image to a temporary file
 	tempCoverPath := filepath.Join(g.tempDir, coverFilename)
-	if err := os.WriteFile(tempCoverPath, coverData, 0644); err != nil {
+	if err := os.WriteFile(tempCoverPath, coverData, 0600); err != nil {
 		return fmt.Errorf("error saving cover image: %v", err)
 	}
 
@@ -78,7 +78,7 @@ func (g *Generator) AddCover(coverData []byte, coverURL string) error {
 func (g *Generator) AddCSS(cssData []byte) error {
 	// Create a temporary file to store the CSS
 	tempCSSFile := filepath.Join(g.tempDir, "epub_styles.css")
-	if err := os.WriteFile(tempCSSFile, cssData, 0644); err != nil {
+	if err := os.WriteFile(tempCSSFile, cssData, 0600); err != nil {
 		return fmt.Errorf("error writing temporary CSS file: %v", err)
 	}
 
@@ -153,7 +153,7 @@ func (g *Generator) AddChapter(title string, content string) error {
 		// Save debug file in temp directory
 		safeTitle := sanitizeFilename(title)
 		debugFilePath := filepath.Join(g.tempDir, fmt.Sprintf("debug_%s_epub.html", safeTitle))
-		if err := os.WriteFile(debugFilePath, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(debugFilePath, []byte(content), 0600); err != nil {
 			slog.Error("Failed to save debug file", "error", err)
 		} else if logger.Debug {
 			slog.Debug("Saved content to debug file", "title", title, "path", debugFilePath)
@@ -167,14 +167,6 @@ func (g *Generator) AddChapter(title string, content string) error {
 	}
 
 	return nil
-}
-
-// min returns the smaller of two integers
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 // Write writes the EPUB file to disk

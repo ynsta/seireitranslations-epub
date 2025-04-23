@@ -1,0 +1,87 @@
+# This file contains golangci-lint configuration customized for the SeireiTranslations EPUB Generator project
+
+run:
+  # Timeout for analysis, e.g. 30s, 5m, default is 1m
+  timeout: 2m
+  # Skip directories, e.g. 'vendor', 'third_party' etc.
+  skip-dirs:
+  - vendor
+
+# Output configuration options
+output:
+  # Format: colored-line-number|line-number|json|tab|checkstyle|code-climate|junit-xml|github-actions
+  format: colored-line-number
+  # Print lines of code with issue
+  print-issued-lines: true
+  # Print linter name in the end of issue text
+  print-linter-name: true
+
+# All available linters
+linters:
+  enable:
+  - errcheck # Checks for unchecked errors in code
+  - gosimple # Suggests code simplifications
+  - govet # Reports suspicious constructs
+  - ineffassign # Detects ineffectual assignments
+  - staticcheck # Static analysis checks
+  # - typecheck # Like the front-end of a Go compiler (temporarily disabled due to import issues)
+  - unused # Checks for unused constants, variables, functions and types
+  - gocyclo # Computes and checks cyclomatic complexity
+  - gofmt # Checks if code was gofmt-ed
+  - gosec # Inspects source code for security problems
+  - misspell # Finds commonly misspelled English words
+  - nakedret # Finds naked returns in functions greater than a specified function length
+  - prealloc # Finds slice declarations that could potentially be preallocated
+  - bodyclose # Checks whether HTTP response bodies are closed
+  - gocritic # Provides diagnostics that check for bugs, performance and style issues
+  - godot # Check if comments end in a period
+  - whitespace # Tool for detection of leading and trailing whitespace
+
+# Linter specific settings
+linters-settings:
+  gocyclo:
+    # Minimal code complexity to report
+    min-complexity: 15
+  gosec:
+    # Which rules to include
+    includes:
+    - G101-G505
+  govet:
+    # Enable all analyzers
+    enable-all: true
+  errcheck:
+    # Check for unchecked errors in type assertions
+    check-type-assertions: true
+    # Check for unchecked errors in assignments with blank identifier
+    check-blank: true
+  nakedret:
+    # Make an issue if func has more lines of code than this setting, and it has naked returns
+    max-func-lines: 30
+  godot:
+    # Comments to be checked: exported, non-exported, or all
+    scope: exported
+    # Check that punctuation after tag is same as in comment text
+    ensure-tags-have-punctuation: true
+
+# Issues configuration
+issues:
+  # Maximum issues count per one linter
+  max-issues-per-linter: 50
+  # Maximum count of issues with the same text
+  max-same-issues: 3
+  # Excluding configuration
+  exclude-rules:
+  # Exclude ineffassign for tests
+  - path: _test\.go
+    linters:
+    - ineffassign
+  # Exclude some linters from running on tests
+  - path: _test\.go
+    linters:
+    - gocyclo
+    - gosec
+    - dupl
+  # Exclude linter issues for TODOs and FIXMEs
+  - source: "(TODO|FIXME|XXX)"
+    linters:
+    - godot

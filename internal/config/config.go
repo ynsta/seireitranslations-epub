@@ -49,8 +49,8 @@ func ParseCommandLine() (*Config, error) {
 		cfg.TempDir = filepath.Join(os.TempDir(), fmt.Sprintf("epub_files_%d", time.Now().UnixNano()))
 	}
 
-	// Create the temporary directory
-	if err := os.MkdirAll(cfg.TempDir, 0755); err != nil {
+	// Create the temporary directory - using 0750 permissions for better security
+	if err := os.MkdirAll(cfg.TempDir, 0750); err != nil {
 		return nil, fmt.Errorf("error creating temp directory: %v", err)
 	}
 
@@ -64,7 +64,9 @@ func ParseCommandLine() (*Config, error) {
 func (c *Config) Cleanup() {
 	if !c.Debug {
 		logger.Logger.Info("Cleaning up temporary directory", "dir", c.TempDir)
-		os.RemoveAll(c.TempDir)
+		if err := os.RemoveAll(c.TempDir); err != nil {
+			logger.Logger.Error("Failed to clean up temporary directory", "dir", c.TempDir, "error", err)
+		}
 	} else {
 		logger.Logger.Info("Debug mode: Temporary directory will not be cleaned up", "dir", c.TempDir)
 	}

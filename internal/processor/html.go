@@ -147,7 +147,7 @@ func (p *HTMLProcessor) CleanHTML(html string, contentTitle string) string {
 		if p.tempDir != "" {
 			safeTitle := sanitizeFilename(contentTitle)
 			debugFilePath := filepath.Join(p.tempDir, fmt.Sprintf("debug_%s_cleaned.html", safeTitle))
-			if err := os.WriteFile(debugFilePath, []byte(cleanedHtml), 0644); err != nil {
+			if err := os.WriteFile(debugFilePath, []byte(cleanedHtml), 0600); err != nil {
 				slog.Error("Failed to save cleaned HTML debug file", "error", err)
 			} else if logger.Debug {
 				slog.Debug("Saved cleaned HTML", "title", contentTitle, "path", debugFilePath)
@@ -193,7 +193,7 @@ func (p *HTMLProcessor) ProcessChapterContent(title string, content string) stri
 		if p.tempDir != "" {
 			safeTitle := sanitizeFilename(title)
 			debugFilePath := filepath.Join(p.tempDir, fmt.Sprintf("debug_%s_processed.html", safeTitle))
-			if err := os.WriteFile(debugFilePath, []byte(content), 0644); err != nil {
+			if err := os.WriteFile(debugFilePath, []byte(content), 0600); err != nil {
 				slog.Error("Failed to save processed content debug file", "error", err)
 			} else if logger.Debug {
 				slog.Debug("Saved processed content", "title", title, "path", debugFilePath)
@@ -222,7 +222,7 @@ func (p *HTMLProcessor) ProcessChapterContent(title string, content string) stri
 		if p.tempDir != "" {
 			safeTitle := sanitizeFilename(title)
 			debugFilePath := filepath.Join(p.tempDir, fmt.Sprintf("debug_%s_final.html", safeTitle))
-			if err := os.WriteFile(debugFilePath, []byte(chapterHTML), 0644); err != nil {
+			if err := os.WriteFile(debugFilePath, []byte(chapterHTML), 0600); err != nil {
 				slog.Error("Failed to save final HTML debug file", "error", err)
 			} else if logger.Debug {
 				slog.Debug("Saved final HTML", "title", title, "path", debugFilePath)
@@ -231,12 +231,4 @@ func (p *HTMLProcessor) ProcessChapterContent(title string, content string) stri
 	}
 
 	return chapterHTML
-}
-
-// min returns the smaller of two integers
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

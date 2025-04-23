@@ -12,13 +12,9 @@ import (
 	"github.com/ynsta/seireitranslations-epub/internal/logger"
 )
 
-// min returns the smaller of two integers
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
+// ChapterTitleSelector is the CSS selector for identifying chapter titles
+// This is used both for extraction patterns and for removing redundant titles
+const ChapterTitleSelector = "h4[style*=center]:first-of-type, p[style*=center]:first-of-type, p>span[style*='800']"
 
 // debugConfig holds debugging configuration
 type debugConfig struct {
@@ -68,7 +64,7 @@ func saveDebugHTML(lineNum int, suffix, content string, urlOrTitle string) {
 	}
 
 	filePath := filepath.Join(debugCfg.tempDir, fmt.Sprintf("debug_%d_%s_%s.html", lineNum, identifier, suffix))
-	err := os.WriteFile(filePath, []byte(content), 0644)
+	err := os.WriteFile(filePath, []byte(content), 0600)
 	if err != nil {
 		slog.Error("Error saving debug HTML", "error", err)
 	} else if logger.Debug {
