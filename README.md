@@ -1,8 +1,4 @@
-## Example Command
-
-```bash
-go run main.go --title "My Light Novel" --author "Author Name" --cover "https://example.com/cover.jpg" --output "mynovel.epub" --urls "urls.txt"
-```# SeireiTranslations EPUB Generator
+# SeireiTranslations EPUB Generator
 
 This Go program scrapes content from SeireiTranslations blog posts and packages them into an EPUB file for easier reading. It extracts content after the H4 heading, removes the last three center-aligned paragraphs, and cleans up inline HTML styles for better EPUB formatting.
 
@@ -15,6 +11,22 @@ This Go program scrapes content from SeireiTranslations blog posts and packages 
 - Adds proper chapter titles and organization
 - Includes a custom cover image
 - Applies consistent styling throughout the EPUB
+
+## Project Structure
+
+The codebase has been refactored into a modular structure:
+
+- `cmd/seireitranslations-epub/`: Application entry point
+- `internal/`: Internal packages
+  - `assets/`: Embedded assets (CSS)
+  - `config/`: Configuration handling
+  - `downloader/`: File downloading functionality
+  - `epub/`: EPUB generation
+  - `processor/`: HTML and image processing
+  - `scraper/`: Web scraping functionality
+- `pkg/`: Potentially reusable packages
+  - `utils/`: Utility functions
+- `assets/`: Static assets
 
 ## Installation
 
@@ -32,7 +44,7 @@ go mod download
 2. Run the program with the required parameters:
 
 ```bash
-go run main.go --title "Novel Title" --author "Author Name" --cover "https://example.com/cover.jpg" --output "output.epub" --urls "urls.txt"
+go run ./cmd/seireitranslations-epub --title "Novel Title" --author "Author Name" --cover "https://example.com/cover.jpg" --output "output.epub" --urls "urls.txt"
 ```
 
 ### Command Line Arguments
@@ -42,6 +54,26 @@ go run main.go --title "Novel Title" --author "Author Name" --cover "https://exa
 - `--cover`: URL of the cover image (required)
 - `--output`: Output EPUB filename (required)
 - `--urls`: Path to a file containing the list of URLs to scrape (required)
+- `--debug`: Enable debug mode (optional)
+
+### Debug Mode
+
+When the `--debug` flag is enabled, the program will:
+
+1. Store temporary files in the current directory with the output filename + `.tmp` suffix
+2. Not clean up the temporary directory after completion
+3. Cache downloaded files for reuse in subsequent runs
+
+This is useful for:
+- Debugging issues with content extraction
+- Examining the intermediate files
+- Speeding up repeated runs by caching downloaded content
+
+Example usage with debug mode:
+
+```bash
+./seireitranslations-epub --title "Novel Title" --author "Author Name" --cover "https://example.com/cover.jpg" --output "output.epub" --urls "urls.txt" --debug
+```
 
 ## Example URLs File Format
 
@@ -63,13 +95,13 @@ This allows you to specify custom chapter titles for each URL.
 To build a standalone executable:
 
 ```bash
-go build -o epub-generator
+go build .
 ```
 
 Then you can run it without needing Go installed:
 
 ```bash
-./epub-generator --title "My Light Novel" --author "Author Name" --cover "https://example.com/cover.jpg" --output "mynovel.epub" --urls "urls.txt"
+./seireitranslations-epub --title "My Light Novel" --author "Author Name" --cover "https://example.com/cover.jpg" --output "mynovel.epub" --urls "urls.txt"
 ```
 
 ## Notes
@@ -77,3 +109,8 @@ Then you can run it without needing Go installed:
 - The program includes a small delay between requests to be respectful to the server
 - URLs should be to specific chapter pages on the SeireiTranslations blog
 - Chapter titles are extracted from the URL structure
+
+## Example Command
+
+```bash
+go run ./cmd/seireitranslations-epub --title "My Light Novel" --author "Author Name" --cover "https://example.com/cover.jpg" --output "mynovel.epub" --urls "urls.txt"
