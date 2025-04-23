@@ -73,6 +73,12 @@ func Execute() int {
 		return 1
 	}
 
+	// Add attribution chapter as the first chapter
+	slog.Info("Adding attribution chapter")
+	if err := epubGen.AddAttributionChapter("Attribution and Sources", urlEntries); err != nil {
+		slog.Warn("Error adding attribution chapter", "error", err)
+	}
+
 	// Create a scraper
 	s := scraper.New(cfg.TempDir, cfg.Debug)
 

@@ -10,6 +10,7 @@ import (
 
 	"github.com/bmaupin/go-epub"
 	"github.com/ynsta/seireitranslations-epub/internal/logger"
+	"github.com/ynsta/seireitranslations-epub/pkg/utils"
 )
 
 // Generator handles EPUB file generation
@@ -89,6 +90,43 @@ func (g *Generator) AddCSS(cssData []byte) error {
 
 	// Store the CSS path for later use
 	g.cssPath = cssPath
+
+	return nil
+}
+
+// AddAttributionChapter adds a chapter with attribution information and support links
+func (g *Generator) AddAttributionChapter(title string, urlEntries []utils.URLEntry) error {
+	// Create HTML content for the attribution chapter
+	content := `<div class="attribution">
+<h1>Attribution</h1>
+<p>This e-book contains content translated by <strong>SeireiTranslations</strong>.</p>
+
+<h2>Support the Translators</h2>
+<p>If you enjoy this translation, please consider supporting the translators to help them continue their work:</p>
+<ul>
+<li><a href="https://ko-fi.com/seireitranslations">Support on Ko-Fi</a></li>
+<li><a href="https://www.patreon.com/seireitl">Support on Patreon</a></li>
+</ul>
+
+<h2>Original Content Sources</h2>
+<p>The content in this e-book was sourced from the following links:</p>
+<ul>
+`
+
+	// Add each URL as a list item
+	for _, entry := range urlEntries {
+		content += fmt.Sprintf("<li><a href=\"%s\">%s</a></li>\n", entry.URL, entry.Title)
+	}
+
+	// Close the HTML tags
+	content += `</ul>
+</div>`
+
+	// Add the attribution chapter to the EPUB
+	_, err := g.epub.AddSection(content, title, "", g.cssPath)
+	if err != nil {
+		return fmt.Errorf("error adding attribution chapter to EPUB: %v", err)
+	}
 
 	return nil
 }
