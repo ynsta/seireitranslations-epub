@@ -80,6 +80,27 @@ func (s *Scraper) ExtractContent(pageURL string, lineNum int) (Content, error) {
 		return Content{}, fmt.Errorf("error parsing content HTML: %v", err)
 	}
 
+	// Remove empty p, div, span, and heading elements that have no text or image content
+	contentDoc.Find("p, div, span, h1, h2, h3, h4, h5, h6").Each(func(i int, s *goquery.Selection) {
+		// Check if element has text content (trimming whitespace)
+		text := strings.TrimSpace(s.Text())
+
+		// Check if element has any img children
+		hasImage := s.Find("img").Length() > 0
+
+		// If element has no text and no images, remove it
+		if text == "" && !hasImage {
+			s.Remove()
+			if logger.Debug {
+				slog.Debug("Removed empty element", "tag", s.Get(0).Data)
+			}
+		}
+	})
+
+	if logger.Debug {
+		slog.Debug("Content length after removing empty elements", "length", len(contentDoc.Text()))
+	}
+
 	// Remove the sharethis-inline-reaction-buttons div
 	contentDoc.Find(".sharethis-inline-reaction-buttons").Remove()
 
@@ -101,14 +122,26 @@ func (s *Scraper) ExtractContent(pageURL string, lineNum int) (Content, error) {
 	}
 
 	// Remove blog URL entries (seireitranslations.blogspot.com)
-	contentDoc.Find("p").Each(func(i int, s *goquery.Selection) {
-		html, _ := s.Html()
-		htmlLower := strings.ToLower(html)
+	contentDoc.Find("p, div").Each(func(i int, s *goquery.Selection) {
+		// Get the text content of the element
+		text := strings.TrimSpace(s.Text())
 
-		if strings.Contains(htmlLower, "seireitranslations.blogspot.com") {
+		// Remove common decorative elements like dashes, arrows, etc.
+		text = strings.ReplaceAll(text, "—", "")
+		text = strings.ReplaceAll(text, "-", "")
+		text = strings.ReplaceAll(text, ">", "")
+		text = strings.ReplaceAll(text, "<", "")
+		text = strings.ReplaceAll(text, "|", "")
+		text = strings.ReplaceAll(text, "*", "")
+
+		// Trim spaces again after removing decorative elements
+		text = strings.TrimSpace(text)
+
+		// Check if the cleaned text exactly matches the blog URL
+		if strings.EqualFold(text, "seireitranslations.blogspot.com") {
 			s.Remove()
 			if logger.Debug {
-				slog.Debug("Removed blog URL element")
+				slog.Debug("Removed blog URL element", "tag", s.Get(0).Data, "original_text", s.Text())
 			}
 		}
 	})
@@ -126,6 +159,22 @@ func (s *Scraper) ExtractContent(pageURL string, lineNum int) (Content, error) {
 			if parentP.Is("p") {
 				// Create a new h3 element with the same text
 				parentP.ReplaceWithHtml(fmt.Sprintf("<h3>%s</h3>", text))
+			}
+		}
+	})
+
+	// Also convert <div><b>Part X</b></div> format to h3 subtitles
+	contentDoc.Find("div > b").Each(func(i int, s *goquery.Selection) {
+		text := s.Text()
+		if strings.HasPrefix(strings.ToLower(text), "part ") {
+			// Get the parent div
+			parentDiv := s.Parent()
+			if parentDiv.Is("div") {
+				// Create a new h3 element with the same text
+				parentDiv.ReplaceWithHtml(fmt.Sprintf("<h3>%s</h3>", text))
+				if logger.Debug {
+					slog.Debug("Converted div>b Part X to h3", "text", text)
+				}
 			}
 		}
 	})

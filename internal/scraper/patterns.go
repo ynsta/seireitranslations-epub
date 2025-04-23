@@ -14,7 +14,7 @@ import (
 
 // ChapterTitleSelector is the CSS selector for identifying chapter titles
 // This is used both for extraction patterns and for removing redundant titles
-const ChapterTitleSelector = "h4[style*=center]:first-of-type, p[style*=center]:first-of-type, p>span[style*='800']"
+const ChapterTitleSelector = "h4[style*=center]:first-of-type, p[style*=center]:first-of-type, p>span[style*='800'], div[style*=center]>h4:first-of-type"
 
 // debugConfig holds debugging configuration
 type debugConfig struct {
